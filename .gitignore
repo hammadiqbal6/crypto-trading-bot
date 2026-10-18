@@ -82,3 +82,4 @@ node_modules/
 config/freqtrade/config.json
 config/freqtrade/config.download.json
 config/freqtrade/config.backtest.json
+user_data/sentiment_features.json
