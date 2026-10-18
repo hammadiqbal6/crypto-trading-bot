@@ -120,6 +120,9 @@ filterwarnings = [
   "ignore::DeprecationWarning",
   "ignore::UserWarning",
 ]
+markers = [
+  "e2e: Playwright end-to-end UI tests (excluded from default unit/integration runs)",
+]
 
 [tool.coverage.run]
 source = ["src/crypto_bot"]

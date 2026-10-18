@@ -152,21 +152,38 @@ def check_exchange_health(settings: Settings) -> ExchangeHealth:
             details={"btc_last": last},
         )
     except ccxt.NetworkError as e:
+        msg = str(e)
+        tips = [
+            "Exchange unreachable. Check internet, firewall, and exchange status pages.",
+            *guidance,
+        ]
+        if "CloudFront" in msg or "block access from your country" in msg or "451" in msg:
+            tips.insert(
+                0,
+                "Geo-block detected. Public OHLCV still works via OKX/Kraken/Gate fallbacks "
+                "(crypto-bot download-data). For Bybit Demo private API, run from an "
+                "allowed region/network.",
+            )
         return ExchangeHealth(
             ok=False,
             exchange=name,
             dry_run=dry,
-            message=str(e),
-            guidance=[
-                "Exchange unreachable. Check internet, firewall, and exchange status pages.",
-                *guidance,
-            ],
+            message=msg[:240],
+            guidance=tips,
         )
     except Exception as e:
+        msg = str(e)
+        tips = ["Unexpected exchange error. See logs.", *guidance]
+        if "CloudFront" in msg or "block access from your country" in msg:
+            tips.insert(
+                0,
+                "Geo-block detected on exchange REST host. Use public-data fallbacks for "
+                "validation; demo trading needs an allowed network path to Bybit Demo.",
+            )
         return ExchangeHealth(
             ok=False,
             exchange=name,
             dry_run=dry,
-            message=str(e),
-            guidance=["Unexpected exchange error. See logs.", *guidance],
+            message=msg[:240],
+            guidance=tips,
         )

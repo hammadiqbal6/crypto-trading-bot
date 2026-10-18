@@ -26,10 +26,10 @@ typecheck:
 	mypy src/crypto_bot
 
 test:
-	pytest tests/unit tests/integration -q
+	pytest tests/unit tests/integration -q -m "not e2e"
 
 test-e2e:
-	pytest tests/e2e -q --cov-fail-under=0
+	pytest tests/e2e -q -m e2e --cov-fail-under=0
 
 dashboard:
 	crypto-bot dashboard
