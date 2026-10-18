@@ -40,10 +40,9 @@ def create_app() -> FastAPI:
     async def _crypto_err(_req: Request, exc: CryptoBotError) -> JSONResponse:
         return JSONResponse(status_code=400, content=exc.to_dict())
 
-    def _ctx(request: Request, **extra: Any) -> dict[str, Any]:
+    def _ctx(**extra: Any) -> dict[str, Any]:
         state = get_app_state()
         return {
-            "request": request,
             "status": state.status_dict(),
             "risk": state.risk_state().to_dict(),
             "health": state.exchange_health.to_dict() if state.exchange_health else None,
@@ -62,27 +61,27 @@ def create_app() -> FastAPI:
     # ---- Pages ----
     @app.get("/", response_class=HTMLResponse)
     async def dashboard(request: Request) -> HTMLResponse:
-        return TEMPLATES.TemplateResponse("dashboard.html", _ctx(request, page="overview"))
+        return TEMPLATES.TemplateResponse(request, "dashboard.html", _ctx(page="overview"))
 
     @app.get("/setup", response_class=HTMLResponse)
     async def setup(request: Request) -> HTMLResponse:
-        return TEMPLATES.TemplateResponse("setup.html", _ctx(request, page="setup"))
+        return TEMPLATES.TemplateResponse(request, "setup.html", _ctx(page="setup"))
 
     @app.get("/news", response_class=HTMLResponse)
     async def news_page(request: Request) -> HTMLResponse:
-        return TEMPLATES.TemplateResponse("news.html", _ctx(request, page="news"))
+        return TEMPLATES.TemplateResponse(request, "news.html", _ctx(page="news"))
 
     @app.get("/validation", response_class=HTMLResponse)
     async def validation_page(request: Request) -> HTMLResponse:
-        return TEMPLATES.TemplateResponse("validation.html", _ctx(request, page="validation"))
+        return TEMPLATES.TemplateResponse(request, "validation.html", _ctx(page="validation"))
 
     @app.get("/risk", response_class=HTMLResponse)
     async def risk_page(request: Request) -> HTMLResponse:
-        return TEMPLATES.TemplateResponse("risk.html", _ctx(request, page="risk"))
+        return TEMPLATES.TemplateResponse(request, "risk.html", _ctx(page="risk"))
 
     @app.get("/logs", response_class=HTMLResponse)
     async def logs_page(request: Request) -> HTMLResponse:
-        return TEMPLATES.TemplateResponse("logs.html", _ctx(request, page="logs"))
+        return TEMPLATES.TemplateResponse(request, "logs.html", _ctx(page="logs"))
 
     # ---- Actions ----
     @app.post("/actions/refresh-news")
