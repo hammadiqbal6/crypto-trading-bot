@@ -110,7 +110,18 @@ def walk_forward_momentum(
     result = WalkForwardResult(fee_bps=fee_bps, slippage_bps=slippage_bps, n_trials=len(lookbacks))
     close = close.dropna()
     n = len(close)
-    if n < train_bars + test_bars + holdout_bars + 50:
+    # Auto-shrink windows when history is short (common with geo-blocked primary exchanges).
+    min_need = train_bars + test_bars + holdout_bars + 50
+    if n < min_need:
+        train_bars = max(80, n // 3)
+        test_bars = max(30, n // 8)
+        holdout_bars = max(40, n // 6)
+        result.notes.append(
+            f"Short history ({n} bars): auto-adjusted windows "
+            f"train={train_bars} test={test_bars} holdout={holdout_bars}. "
+            "Prefer `crypto-bot download-data --limit 1000` when egress allows."
+        )
+    if n < train_bars + test_bars + holdout_bars + 30:
         result.notes.append(
             f"Insufficient bars ({n}). Need train+test+holdout+warmup. "
             "Download more history via `make download-data`."
