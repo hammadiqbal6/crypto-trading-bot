@@ -296,7 +296,16 @@ class Settings(BaseSettings):
             "datadir": str(self.user_data_dir / "data"),
             "logfile": str(self.user_data_dir / "logs" / "freqtrade.log"),
             "db_url": f"sqlite:///{self.user_data_dir / 'tradesv3.sqlite'}",
-            "api_server": {"enabled": False},
+            "api_server": {
+                "enabled": False,
+                "listen_ip_address": "127.0.0.1",
+                "listen_port": 8081,
+                "verbosity": "error",
+                "jwt_secret_key": "change-me-freqtrade-jwt-not-for-production-use",
+                "username": "freqtrader",
+                "password": "changeme",
+                "ws_token": "changeme",
+            },
             "crypto_bot": {
                 "sentiment_block_threshold": self.sentiment_block_threshold,
                 "sentiment_sizeup_threshold": self.sentiment_sizeup_threshold,
