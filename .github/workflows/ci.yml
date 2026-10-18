@@ -48,7 +48,12 @@ jobs:
             echo "Committed .env file detected" >&2
             exit 1
           fi
-          if grep -RInE 'sk-[a-zA-Z0-9]{20,}|BYBIT_API_SECRET=.+' --exclude-dir=.git --exclude='*.md' --exclude='.env.example' . ; then
+          # Scan tracked files only; exclude docs, examples, and this workflow (pattern self-match).
+          hits=$(git grep -nE 'sk-[a-zA-Z0-9]{20,}|BYBIT_API_SECRET=[^[:space:]]+' -- \
+            ':(exclude)*.md' ':(exclude).env.example' ':(exclude).github/workflows/*' \
+            ':(exclude)docs/**' || true)
+          if [ -n "$hits" ]; then
+            echo "$hits" >&2
             echo "Possible secret material found" >&2
             exit 1
           fi
