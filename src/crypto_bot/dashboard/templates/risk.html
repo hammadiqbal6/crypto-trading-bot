@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Risk{% endblock %}
+{% block content %}
+<section class="hero">
+  <h1>Risk</h1>
+  <p>
+    Position limits, stop-loss, daily loss cap, and drawdown kill switch.
+    Sentiment may block or size-up — it never bypasses these rules.
+  </p>
+</section>
+
+<div class="grid">
+  <section class="panel">
+    <h2>State</h2>
+    <div class="stat-row">
+      <div class="stat">
+        <span class="label">Kill switch</span>
+        <span class="value {{ 'bad' if risk.killed else 'ok' }}">
+          {{ 'ENGAGED' if risk.killed else 'clear' }}
+        </span>
+      </div>
+      <div class="stat">
+        <span class="label">Equity</span>
+        <span class="value">{{ '%.0f'|format(risk.equity) }}</span>
+      </div>
+      <div class="stat">
+        <span class="label">Peak</span>
+        <span class="value">{{ '%.0f'|format(risk.peak_equity) }}</span>
+      </div>
+      <div class="stat">
+        <span class="label">Blocked entries</span>
+        <span class="value">{{ risk.blocked_entries }}</span>
+      </div>
+    </div>
+    {% if risk.last_block_reason %}
+    <p class="sub">Last block: {{ risk.last_block_reason }}</p>
+    {% endif %}
+    {% if risk.kill_reason %}
+    <p class="sub">Kill reason: {{ risk.kill_reason }}</p>
+    {% endif %}
+  </section>
+
+  <section class="panel">
+    <h2>Reset kill switch</h2>
+    <p class="sub">Operator acknowledgement required</p>
+    <form action="/actions/reset-kill-switch" method="post">
+      <label for="ack">Type <code>RESET_KILL_SWITCH</code></label><br />
+      <input id="ack" name="ack" style="margin:0.5rem 0;padding:0.5rem;width:100%;max-width:20rem;border-radius:8px;border:1px solid var(--line);font-family:inherit" />
+      <div class="cta-row">
+        <button class="btn btn-danger" type="submit">Clear kill switch</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel wide">
+    <h2>Live trading gate</h2>
+    <p class="sub">
+      Live is off by default. To enable: <code>LIVE_TRADING=true</code> and
+      <code>LIVE_TRADING_CONFIRM=I_UNDERSTAND_LIVE_RISK</code>. Missing confirmation raises a
+      config error at startup.
+    </p>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Validation{% endblock %}
+{% block content %}
+<section class="hero">
+  <h1>Validation</h1>
+  <p>
+    Walk-forward + untouched holdout with fees/slippage. Deflated Sharpe and PBO discourage
+    overfitting. Honest accuracy: ~51–55% daily direction is the realistic free-stack ceiling.
+  </p>
+  <div class="cta-row">
+    <form action="/actions/run-validation" method="post" data-busy>
+      <button class="btn btn-primary" type="submit">Run walk-forward (BTC)</button>
+    </form>
+  </div>
+</section>
+
+<div class="grid">
+  <section class="panel wide">
+    <h2>Results</h2>
+    {% if validation %}
+    <div class="stat-row">
+      <div class="stat">
+        <span class="label">Mean OOS Sharpe</span>
+        <span class="value {{ 'ok' if validation.mean_oos_sharpe > 0 else 'bad' }}">
+          {{ '%.3f'|format(validation.mean_oos_sharpe) }}
+        </span>
+      </div>
+      <div class="stat">
+        <span class="label">Holdout Sharpe</span>
+        <span class="value">{{ '%.3f'|format(validation.holdout_sharpe) }}</span>
+      </div>
+      <div class="stat">
+        <span class="label">Holdout return</span>
+        <span class="value">{{ '%.2f'|format(validation.holdout_return * 100) }}%</span>
+      </div>
+      <div class="stat">
+        <span class="label">Max DD</span>
+        <span class="value">{{ '%.2f'|format(validation.holdout_max_dd * 100) }}%</span>
+      </div>
+      <div class="stat">
+        <span class="label">Deflated Sharpe</span>
+        <span class="value">{{ '%.3f'|format(validation.deflated_sharpe) }}</span>
+      </div>
+      <div class="stat">
+        <span class="label">PBO</span>
+        <span class="value {{ 'warn' if validation.pbo >= 0.5 else 'ok' }}">
+          {{ '%.3f'|format(validation.pbo) }}
+        </span>
+      </div>
+      <div class="stat">
+        <span class="label">Gates</span>
+        <span class="value {{ 'ok' if validation.passed_gates else 'bad' }}">
+          {{ 'pass' if validation.passed_gates else 'fail' }}
+        </span>
+      </div>
+    </div>
+    <p class="sub">
+      Costs: {{ validation.fee_bps }} bps fees + {{ validation.slippage_bps }} bps slippage ·
+      trials={{ validation.n_trials }}
+    </p>
+    {% if validation.notes %}
+    <ul>
+      {% for n in validation.notes %}<li>{{ n }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+    {% if validation.folds %}
+    <table style="margin-top:1rem">
+      <thead>
+        <tr><th>Train</th><th>Test</th><th>LB</th><th>IS Sharpe</th><th>OOS Sharpe</th></tr>
+      </thead>
+      <tbody>
+        {% for f in validation.folds %}
+        <tr>
+          <td>{{ f.train_start }} → {{ f.train_end }}</td>
+          <td>{{ f.test_start }} → {{ f.test_end }}</td>
+          <td>{{ f.lookback }}</td>
+          <td>{{ '%.2f'|format(f.is_sharpe) }}</td>
+          <td>{{ '%.2f'|format(f.oos_sharpe) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+    {% else %}
+    <div class="empty">
+      No validation run yet. This downloads public BTC/USDT 4h candles via CCXT (no API key).
+      Also run freqtrade lookahead-analysis / recursive-analysis before promoting a strategy.
+    </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

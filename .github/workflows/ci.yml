@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "cursor/**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          # Core + dev; skip heavy torch in CI unit path via lightweight extras where possible
+          pip install -e ".[dev]"
+      - name: Ruff
+        run: |
+          ruff check src tests user_data/strategies
+          ruff format --check src tests user_data/strategies
+      - name: Mypy
+        run: mypy src/crypto_bot
+      - name: Pytest
+        run: pytest tests/unit tests/integration -q
+        env:
+          LIVE_TRADING: "false"
+          TRADING_MODE: demo
+          LLM_PROVIDER: none
+          USE_FINBERT: "false"
+
+  secrets-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure no .env committed
+        run: |
+          if git ls-files | grep -E '(^|/)\.env$'; then
+            echo "Committed .env file detected" >&2
+            exit 1
+          fi
+          if grep -RInE 'sk-[a-zA-Z0-9]{20,}|BYBIT_API_SECRET=.+' --exclude-dir=.git --exclude='*.md' --exclude='.env.example' . ; then
+            echo "Possible secret material found" >&2
+            exit 1
+          fi
+          echo "OK"

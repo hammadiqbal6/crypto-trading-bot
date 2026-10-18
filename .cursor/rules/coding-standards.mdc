@@ -1,0 +1,14 @@
+---
+description: Coding standards for crypto-trading-bot
+globs: ["src/**/*.py", "tests/**/*.py", "user_data/strategies/**/*.py"]
+---
+
+# Coding standards
+
+- Python 3.11+, type hints on public functions, pydantic models for configs.
+- Prefer small pure modules; side effects at service/API edges.
+- Use `structlog` via `crypto_bot.utils.logging.get_logger`.
+- Raise `CryptoBotError` subclasses with `guidance=` for UI/log actionability.
+- Ruff + mypy must pass; no bare `except:`.
+- Strategies that run under freqtrade may keep freqtrade-style naming (`populate_*`).
+- Do not import torch/transformers at module top-level — lazy load FinBERT.

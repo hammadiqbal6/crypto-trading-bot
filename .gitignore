@@ -1,0 +1,81 @@
+# Secrets — never commit
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+secrets/
+credentials.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.venv/
+venv/
+ENV/
+
+# Test / type / lint caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+coverage.xml
+.tox/
+.hypothesis/
+
+# Freqtrade / trading runtime
+user_data/data/**
+!user_data/data/.gitkeep
+user_data/logs/**
+!user_data/logs/.gitkeep
+user_data/models/**
+user_data/freqaimodels/**
+!user_data/freqaimodels/.gitkeep
+user_data/backtest_results/**
+user_data/plot/**
+user_data/hyperopt_results/**
+*.sqlite
+*.sqlite-journal
+tradesv3*.sqlite*
+
+# Caches
+.cache/
+news_cache/
+sentiment_cache/
+*.joblib
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~
+
+# Artifacts (keep screenshots under docs/)
+artifacts/
+*.log
+
+# Docker
+docker-compose.override.yml
+
+# Node (if frontend tooling added later)
+node_modules/

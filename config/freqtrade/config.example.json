@@ -1,0 +1,33 @@
+{
+  "max_open_trades": 3,
+  "stake_currency": "USDT",
+  "dry_run": true,
+  "dry_run_wallet": 10000,
+  "trading_mode": "spot",
+  "exchange": {
+    "name": "bybit",
+    "key": "",
+    "secret": "",
+    "ccxt_config": {
+      "enableRateLimit": true,
+      "hostname": "api-demo.bybit.com",
+      "options": {"defaultType": "spot"}
+    },
+    "pair_whitelist": ["BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "XRP/USDT"],
+    "pair_blacklist": []
+  },
+  "pairlists": [{"method": "StaticPairList"}],
+  "timeframe": "4h",
+  "stoploss": -0.05,
+  "minimal_roi": {"0": 0.1, "60": 0.05, "180": 0.02, "360": 0},
+  "strategy": "VolatilityMomentumStrategy",
+  "user_data_dir": "user_data",
+  "crypto_bot": {
+    "sentiment_block_threshold": -0.55,
+    "sentiment_sizeup_threshold": 0.45,
+    "sentiment_sizeup_factor": 1.15,
+    "volatility_target_annual": 0.2,
+    "freqai_enabled": false,
+    "carry_enabled": false
+  }
+}

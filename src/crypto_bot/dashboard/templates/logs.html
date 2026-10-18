@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Logs{% endblock %}
+{% block content %}
+<section class="hero">
+  <h1>Logs</h1>
+  <p>Recent in-process events. Freqtrade also writes to <code>user_data/logs/</code>.</p>
+</section>
+<div class="grid">
+  <section class="panel wide">
+    <h2>Event stream</h2>
+    {% if logs %}
+    <div class="log-box">{% for line in logs %}{{ line }}
+{% endfor %}</div>
+    {% else %}
+    <div class="empty">No logs yet. Trigger exchange check, news refresh, or validation.</div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

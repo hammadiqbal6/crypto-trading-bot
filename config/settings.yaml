@@ -1,0 +1,36 @@
+# Non-secret defaults (override via .env for secrets and mode flags)
+trading_mode: demo
+live_trading: false
+exchange_name: bybit
+bybit_demo: true
+timeframe: "4h"
+max_open_trades: 3
+stake_currency: USDT
+dry_run_wallet: 10000
+max_daily_loss_pct: 3.0
+max_drawdown_pct: 15.0
+stoploss_pct: -0.05
+volatility_target_annual: 0.20
+position_size_cap_pct: 0.25
+sentiment_block_threshold: -0.55
+sentiment_sizeup_threshold: 0.45
+sentiment_sizeup_factor: 1.15
+freqai_enabled: false
+carry_enabled: false
+llm_provider: groq
+use_finbert: true
+llm_rate_limit_rpm: 25
+sentiment_cache_ttl_hours: 24
+news_enable_reddit: false
+log_level: INFO
+pair_whitelist:
+  - BTC/USDT
+  - ETH/USDT
+  - SOL/USDT
+  - BNB/USDT
+  - XRP/USDT
+  - ADA/USDT
+  - AVAX/USDT
+  - DOGE/USDT
+  - LINK/USDT
+  - DOT/USDT
