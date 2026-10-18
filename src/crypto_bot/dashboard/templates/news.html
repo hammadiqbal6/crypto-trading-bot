@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}News{% endblock %}
+{% block content %}
+<section class="hero">
+  <h1>News &amp; sentiment</h1>
+  <p>GDELT + crypto RSS (no keys). Optional Reddit. FinBERT first, LLM optional, neutral on failure.</p>
+  <div class="cta-row">
+    <form action="/actions/refresh-news" method="post" data-busy>
+      <button class="btn btn-primary" type="submit">Refresh now</button>
+    </form>
+  </div>
+</section>
+
+{% if news_errors %}
+<aside class="banner warn">
+  <strong>Source issues (others may still work)</strong>
+  <ul>
+    {% for e in news_errors %}
+    <li>{{ e.guidance or e.error }}</li>
+    {% endfor %}
+  </ul>
+</aside>
+{% endif %}
+
+<div class="grid">
+  <section class="panel wide">
+    <h2>Recent articles</h2>
+    <p class="sub">Scores are features for the strategy filter — not trade orders</p>
+    {% if articles %}
+    <table>
+      <thead>
+        <tr><th>When</th><th>Source</th><th>Coins</th><th>Sentiment</th><th>Headline</th></tr>
+      </thead>
+      <tbody>
+        {% for a in articles %}
+        <tr>
+          <td>{{ a.published or '—' }}</td>
+          <td>{{ a.source }}</td>
+          <td>{{ a.coins | join(', ') if a.coins else '—' }}</td>
+          <td>
+            {% if a.sentiment_score is not none %}
+              {{ '%.2f'|format(a.sentiment_score) }}
+              <span class="tag">{{ a.sentiment_label or a.sentiment_provider }}</span>
+            {% else %}
+              —
+            {% endif %}
+          </td>
+          <td><a href="{{ a.url }}" target="_blank" rel="noopener">{{ a.title }}</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty">
+      No articles loaded. Refresh to fetch GDELT/RSS. Empty results usually mean network issues
+      or rate limits — the bot falls back to neutral sentiment.
+    </div>
+    <div class="skel"></div><div class="skel"></div><div class="skel"></div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

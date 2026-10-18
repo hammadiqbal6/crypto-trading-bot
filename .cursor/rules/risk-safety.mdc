@@ -1,0 +1,13 @@
+---
+description: Hard risk and trading safety rules
+globs: ["src/crypto_bot/risk/**", "src/crypto_bot/config/**", "user_data/strategies/**", "src/crypto_bot/carry/**"]
+---
+
+# Risk & safety
+
+- Live trading requires `LIVE_TRADING=true` AND `LIVE_TRADING_CONFIRM=I_UNDERSTAND_LIVE_RISK`.
+- LLM/sentiment must never place orders or override stoploss, max open trades, daily loss, drawdown kill switch, or position caps.
+- Carry module and FreqAI stay off unless explicitly enabled in config/env.
+- Kill switch clear requires operator ack `RESET_KILL_SWITCH`.
+- Default exchange path is Bybit Demo / dry_run.
+- When uncertain, fail closed (block entry) and log guidance.

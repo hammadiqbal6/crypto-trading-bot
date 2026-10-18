@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Setup{% endblock %}
+{% block content %}
+<section class="hero">
+  <h1>Setup</h1>
+  <p>Onboarding for demo trading. Live mode stays locked until you confirm risk.</p>
+</section>
+
+<div class="grid">
+  <section class="panel wide">
+    <h2>Wizard</h2>
+    <p class="sub">Current step: {{ onboarding_step }} / 4</p>
+    <div class="steps">
+      <div class="step {{ 'done' if onboarding_step >= 1 else '' }}">
+        <div>
+          <h3>Copy environment file</h3>
+          <p><code>cp .env.example .env</code> — never commit secrets. See README account table.</p>
+        </div>
+      </div>
+      <div class="step {{ 'done' if onboarding_step >= 2 else '' }}">
+        <div>
+          <h3>Bybit Demo API keys</h3>
+          <p>
+            Create Demo Trading keys at Bybit → API Management (Pakistan-friendly).
+            Set <code>BYBIT_API_KEY</code> / <code>BYBIT_API_SECRET</code>.
+            Alternative: Binance Spot Testnet (not licensed in Pakistan for live).
+          </p>
+        </div>
+      </div>
+      <div class="step {{ 'done' if onboarding_step >= 3 else '' }}">
+        <div>
+          <h3>Optional sentiment LLM</h3>
+          <p>
+            Groq free tier for LLM enrichment, or leave blank — local FinBERT / neutral fallback.
+            GDELT + crypto RSS need no keys.
+          </p>
+        </div>
+      </div>
+      <div class="step {{ 'done' if onboarding_step >= 4 else '' }}">
+        <div>
+          <h3>Validate before trusting</h3>
+          <p>
+            Run walk-forward from the Validation page. Require honest OOS metrics after fees.
+            Paper trade 4–8 weeks before considering live (explicit flag + confirmation).
+          </p>
+        </div>
+      </div>
+    </div>
+    <form action="/actions/onboarding" method="post" style="margin-top:1rem" data-busy>
+      <input type="hidden" name="step" value="{{ onboarding_step + 1 if onboarding_step < 4 else 4 }}" />
+      <button class="btn btn-primary" type="submit">Mark next step done</button>
+    </form>
+  </section>
+
+  <section class="panel wide">
+    <h2>Accounts checklist</h2>
+    <p class="sub">Full table lives in README — summary of what you need</p>
+    <table>
+      <thead>
+        <tr><th>Service</th><th>Required?</th><th>Cost</th><th>Env</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>GDELT DOC 2.0</td><td>No signup</td><td>Free</td><td>—</td></tr>
+        <tr><td>Crypto RSS</td><td>No signup</td><td>Free</td><td>—</td></tr>
+        <tr><td>CCXT public OHLCV</td><td>No signup</td><td>Free</td><td>—</td></tr>
+        <tr><td>FinBERT local</td><td>No signup</td><td>Free (CPU)</td><td>—</td></tr>
+        <tr><td>Bybit Demo</td><td>For private demo trading</td><td>Free</td><td>BYBIT_API_KEY/SECRET</td></tr>
+        <tr><td>Binance Testnet</td><td>Optional alt</td><td>Free</td><td>BINANCE_TESTNET_*</td></tr>
+        <tr><td>Groq</td><td>Optional LLM</td><td>Free tier</td><td>GROQ_API_KEY</td></tr>
+        <tr><td>Reddit</td><td>Optional news</td><td>Free non-commercial</td><td>REDDIT_*</td></tr>
+      </tbody>
+    </table>
+  </section>
+</div>
+{% endblock %}

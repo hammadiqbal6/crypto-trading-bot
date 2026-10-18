@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block title %}Overview{% endblock %}
+{% block content %}
+<section class="hero">
+  <h1>Signalforge</h1>
+  <p>
+    Volatility-scaled momentum on large-cap crypto, filtered by news sentiment.
+    Demo trading by default — validation before trust.
+  </p>
+  <div class="cta-row">
+    <form action="/actions/check-exchange" method="post" data-busy>
+      <button class="btn btn-primary" type="submit">Check exchange</button>
+    </form>
+    <form action="/actions/refresh-news" method="post" data-busy>
+      <button class="btn btn-ghost" type="submit">Refresh news</button>
+    </form>
+    <form action="/actions/run-validation" method="post" data-busy>
+      <button class="btn btn-ghost" type="submit">Run validation</button>
+    </form>
+    <form action="/actions/toggle-bot" method="post">
+      <button class="btn btn-ghost" type="submit">
+        {% if status.bot_running %}Pause flag{% else %}Arm demo flag{% endif %}
+      </button>
+    </form>
+    <a class="btn btn-ghost" href="/setup">Setup wizard</a>
+  </div>
+</section>
+
+<div class="grid">
+  <section class="panel">
+    <h2>Status</h2>
+    <p class="sub">Runtime mode and engine flags</p>
+    <div class="stat-row">
+      <div class="stat">
+        <span class="label">Mode</span>
+        <span class="value">{{ status.trading_mode }}</span>
+      </div>
+      <div class="stat">
+        <span class="label">Bot flag</span>
+        <span class="value {{ 'ok' if status.bot_running else '' }}">
+          {{ 'armed' if status.bot_running else 'idle' }}
+        </span>
+      </div>
+      <div class="stat">
+        <span class="label">FreqAI</span>
+        <span class="value">{{ 'on' if status.freqai_enabled else 'off' }}</span>
+      </div>
+      <div class="stat">
+        <span class="label">Carry</span>
+        <span class="value">{{ 'on' if status.carry_enabled else 'off' }}</span>
+      </div>
+    </div>
+    <p class="sub" style="margin-top:1rem">
+      Pairs: {{ status.pairs | join(', ') }} · {{ status.timeframe }}
+    </p>
+  </section>
+
+  <section class="panel">
+    <h2>Risk</h2>
+    <p class="sub">Hard rules — LLM cannot override</p>
+    <div class="stat-row">
+      <div class="stat">
+        <span class="label">Kill switch</span>
+        <span class="value {{ 'bad' if risk.killed else 'ok' }}">
+          {{ 'ENGAGED' if risk.killed else 'clear' }}
+        </span>
+      </div>
+      <div class="stat">
+        <span class="label">Daily P&amp;L</span>
+        <span class="value">{{ '%.2f'|format(risk.daily_pnl_pct) }}%</span>
+      </div>
+      <div class="stat">
+        <span class="label">Drawdown</span>
+        <span class="value {{ 'warn' if risk.drawdown_pct > 5 else '' }}">
+          {{ '%.2f'|format(risk.drawdown_pct) }}%
+        </span>
+      </div>
+      <div class="stat">
+        <span class="label">Open</span>
+        <span class="value">{{ risk.open_trades }}</span>
+      </div>
+    </div>
+    {% if risk.kill_reason %}
+    <p class="sub">{{ risk.kill_reason }}</p>
+    {% endif %}
+  </section>
+
+  <section class="panel">
+    <h2>Exchange</h2>
+    <p class="sub">Bybit Demo default · Binance testnet alternative</p>
+    {% if health %}
+    <div class="stat-row">
+      <div class="stat">
+        <span class="label">Health</span>
+        <span class="value {{ 'ok' if health.ok else 'bad' }}">
+          {{ 'ok' if health.ok else 'down' }}
+        </span>
+      </div>
+      <div class="stat">
+        <span class="label">Latency</span>
+        <span class="value">{{ health.latency_ms or '—' }}{% if health.latency_ms %}ms{% endif %}</span>
+      </div>
+    </div>
+    <p class="sub">{{ health.message }}</p>
+    {% if health.guidance %}
+    <ul>
+      {% for g in health.guidance %}<li>{{ g }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+    {% else %}
+    <div class="empty">
+      No health check yet. Click <strong>Check exchange</strong>.
+      Public OHLCV still works without API keys via CCXT.
+    </div>
+    {% endif %}
+  </section>
+
+  <section class="panel">
+    <h2>Validation snapshot</h2>
+    <p class="sub">Walk-forward after fees/slippage</p>
+    {% if validation %}
+    <div class="stat-row">
+      <div class="stat">
+        <span class="label">OOS Sharpe</span>
+        <span class="value">{{ '%.2f'|format(validation.mean_oos_sharpe) }}</span>
+      </div>
+      <div class="stat">
+        <span class="label">Holdout</span>
+        <span class="value">{{ '%.2f'|format(validation.holdout_sharpe) }}</span>
+      </div>
+      <div class="stat">
+        <span class="label">DSR</span>
+        <span class="value">{{ '%.2f'|format(validation.deflated_sharpe) }}</span>
+      </div>
+      <div class="stat">
+        <span class="label">PBO</span>
+        <span class="value">{{ '%.2f'|format(validation.pbo) }}</span>
+      </div>
+    </div>
+    <p class="sub">
+      Gates {{ 'passed' if validation.passed_gates else 'not passed' }} —
+      treat as research, not a guarantee.
+    </p>
+    {% else %}
+    <div class="empty">Not run yet. Uses free public CCXT data (no key).</div>
+    {% endif %}
+  </section>
+
+  <section class="panel wide">
+    <h2>Signals with reasons</h2>
+    <p class="sub">Sentiment filter over momentum entries</p>
+    {% if signals %}
+    <table>
+      <thead>
+        <tr><th>Pair</th><th>Action</th><th>Sentiment</th><th>Reason</th></tr>
+      </thead>
+      <tbody>
+        {% for s in signals %}
+        <tr>
+          <td>{{ s.pair }}</td>
+          <td><span class="tag {{ s.action }}">{{ s.action }}</span></td>
+          <td>{{ '%.2f'|format(s.sentiment) }}</td>
+          <td>{{ s.reason }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty">
+      No signals yet. Refresh news to populate sentiment features for the strategy.
+    </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

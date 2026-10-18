@@ -1,0 +1,12 @@
+---
+description: Testing requirements
+globs: ["tests/**", "src/**/*.py"]
+---
+
+# Testing
+
+- Add/adjust unit tests with any behaviour change in risk, validation, sentiment fallbacks, settings.
+- Integration tests must cover dashboard pages render + `/api/health`.
+- Mock network for news/LLM unit tests; optional live network only in explicit integration marks.
+- Keep coverage meaningful; do not disable gates to hide failures.
+- UI changes: run Playwright e2e or manual computer-use pass; capture screenshots under `docs/screenshots/`.
