@@ -8,15 +8,14 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import UTC, datetime
+from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 import numpy as np
 import pandas as pd
+from freqtrade.strategy import IntParameter, IStrategy
 from pandas import DataFrame
-
-from freqtrade.strategy import IStrategy, IntParameter
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +28,7 @@ try:
         volatility_scale_factor,
     )
 except ImportError:  # pragma: no cover - standalone freqtrade path
+
     def time_series_momentum(close: pd.Series, *, lookback: int = 30) -> pd.Series:
         lagged = close.shift(1)
         mom = lagged / lagged.shift(lookback) - 1.0
@@ -50,9 +50,7 @@ except ImportError:  # pragma: no cover - standalone freqtrade path
             return pd.Series(0.0, index=mom.index)
         return ((ranks - 1) / (n - 1) * 2.0 - 1.0).fillna(0.0)
 
-    def combine_signals(
-        ts_sign: float, xs_score: float, vol_scale: float, **kwargs: Any
-    ) -> float:
+    def combine_signals(ts_sign: float, xs_score: float, vol_scale: float, **kwargs: Any) -> float:
         raw = 0.7 * ts_sign + 0.3 * xs_score
         return float(np.clip(raw * vol_scale, -2, 2))
 
@@ -75,7 +73,7 @@ class VolatilityMomentumStrategy(IStrategy):
     exit_profit_only = False
     ignore_roi_if_entry_signal = False
 
-    minimal_roi = {"0": 0.10, "60": 0.05, "180": 0.02, "360": 0}
+    minimal_roi: ClassVar[dict[str, float]] = {"0": 0.10, "60": 0.05, "180": 0.02, "360": 0}
     stoploss = -0.05
     trailing_stop = False
 
@@ -123,12 +121,7 @@ class VolatilityMomentumStrategy(IStrategy):
         loss = (-delta.clip(upper=0)).rolling(14).mean()
         rs = gain / loss.replace(0, np.nan)
         dataframe["rsi"] = (100 - (100 / (1 + rs))).fillna(50)
-        dataframe["atr"] = (
-            (dataframe["high"] - dataframe["low"])
-            .rolling(14)
-            .mean()
-            .fillna(0)
-        )
+        dataframe["atr"] = (dataframe["high"] - dataframe["low"]).rolling(14).mean().fillna(0)
         dataframe["ema_fast"] = close.ewm(span=12, adjust=False).mean()
         dataframe["ema_slow"] = close.ewm(span=48, adjust=False).mean()
         # Placeholder XS — filled in bot_loop_start from all pairs if available
@@ -150,7 +143,7 @@ class VolatilityMomentumStrategy(IStrategy):
                 ohlcv = dp.get_pair_dataframe(pair=pair, timeframe=self.timeframe)
                 if ohlcv is not None and not ohlcv.empty:
                     closes[pair] = ohlcv["close"]
-            except Exception:  # noqa: BLE001
+            except Exception:
                 continue
         if len(closes) < 2:
             return
@@ -171,7 +164,11 @@ class VolatilityMomentumStrategy(IStrategy):
             sent = float(dataframe["sentiment"].iloc[i])
             combined = combine_signals(ts, xs, vs)
             reason = f"ts={ts:.0f} xs={xs:.2f} vol={vs:.2f} sent={sent:.2f}"
-            ok = combined > 0.15 and ts > 0 and dataframe["ema_fast"].iloc[i] > dataframe["ema_slow"].iloc[i]
+            ok = (
+                combined > 0.15
+                and ts > 0
+                and dataframe["ema_fast"].iloc[i] > dataframe["ema_slow"].iloc[i]
+            )
             if sent <= self.sentiment_block:
                 ok = False
                 reason += " | BLOCKED negative news"
@@ -245,7 +242,5 @@ class VolatilityMomentumStrategy(IStrategy):
     def set_freqai_targets(
         self, dataframe: DataFrame, metadata: dict[str, Any], **kwargs: Any
     ) -> DataFrame:
-        dataframe["&-s_close"] = (
-            dataframe["close"].shift(-12) / dataframe["close"] - 1.0
-        )
+        dataframe["&-s_close"] = dataframe["close"].shift(-12) / dataframe["close"] - 1.0
         return dataframe

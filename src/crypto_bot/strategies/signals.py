@@ -26,7 +26,9 @@ def time_series_momentum(
     return np.sign(mom).fillna(0.0)
 
 
-def realized_vol_annual(close: pd.Series, *, window: int = 20, bars_per_year: float = 365 * 6) -> pd.Series:
+def realized_vol_annual(
+    close: pd.Series, *, window: int = 20, bars_per_year: float = 365 * 6
+) -> pd.Series:
     """Annualised realised vol from log returns (default assumes 4h bars ≈ 6/day)."""
     rets = np.log(close / close.shift(1))
     vol = rets.rolling(window).std() * np.sqrt(bars_per_year)

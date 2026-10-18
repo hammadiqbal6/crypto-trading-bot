@@ -63,8 +63,8 @@ class WalkForwardResult:
             "notes": self.notes,
             "passed_gates": self.passed_gates,
             "honest_disclaimer": (
-                "No free method reliably beats ~51–55% daily directional accuracy OOS. "
-                "Target Sharpe after costs 0.5–1.0. Halve published edges."
+                "No free method reliably beats ~51-55% daily directional accuracy OOS. "
+                "Target Sharpe after costs 0.5-1.0. Halve published edges."
             ),
         }
 
@@ -131,7 +131,11 @@ def walk_forward_momentum(
         best_is = -1e9
         for lb in lookbacks:
             net, _, _ = _backtest_tsmom(
-                train, lookback=lb, vol_target=vol_target, fee_bps=fee_bps, slippage_bps=slippage_bps
+                train,
+                lookback=lb,
+                vol_target=vol_target,
+                fee_bps=fee_bps,
+                slippage_bps=slippage_bps,
             )
             s = sharpe_ratio(net)
             if s > best_is:

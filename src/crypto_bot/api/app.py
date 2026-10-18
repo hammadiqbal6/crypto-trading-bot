@@ -89,7 +89,7 @@ def create_app() -> FastAPI:
         state = get_app_state()
         try:
             await state.refresh_news_and_sentiment()
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             state.add_log(f"News refresh failed: {e}")
         return RedirectResponse("/news", status_code=303)
 
@@ -120,7 +120,7 @@ def create_app() -> FastAPI:
                     f"holdout={result.holdout_sharpe:.2f} DSR={result.deflated_sharpe:.2f} "
                     f"PBO={result.pbo:.2f} passed={result.passed_gates}"
                 )
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             state.add_log(f"Validation failed: {e}")
             log.exception("validation_failed")
         return RedirectResponse("/validation", status_code=303)

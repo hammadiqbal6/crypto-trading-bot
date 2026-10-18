@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Literal
@@ -16,18 +16,18 @@ CONFIG_DIR = ROOT / "config"
 DEFAULT_YAML = CONFIG_DIR / "settings.yaml"
 
 
-class TradingMode(str, Enum):
+class TradingMode(StrEnum):
     DEMO = "demo"
     PAPER = "paper"
     LIVE = "live"
 
 
-class ExchangeName(str, Enum):
+class ExchangeName(StrEnum):
     BYBIT = "bybit"
     BINANCE = "binance"
 
 
-class LLMProvider(str, Enum):
+class LLMProvider(StrEnum):
     NONE = "none"
     GROQ = "groq"
     OLLAMA = "ollama"
@@ -149,8 +149,8 @@ class Settings(BaseSettings):
             if self.trading_mode != TradingMode.LIVE:
                 object.__setattr__(self, "trading_mode", TradingMode.LIVE)
         else:
-            # Force non-live modes to stay safe
-            if self.trading_mode == TradingMode.LIVE:
+            # Force non-live modes to stay safe if somehow set without the gate
+            if self.trading_mode.value == "live":
                 object.__setattr__(self, "trading_mode", TradingMode.DEMO)
         return self
 
@@ -174,9 +174,7 @@ class Settings(BaseSettings):
             return bool(self.groq_api_key.get_secret_value())
         if self.llm_provider == LLMProvider.OPENAI:
             return bool(self.openai_api_key.get_secret_value())
-        if self.llm_provider == LLMProvider.OLLAMA:
-            return True
-        return False
+        return self.llm_provider == LLMProvider.OLLAMA
 
     def missing_required_guidance(self) -> list[str]:
         """Actionable guidance for missing/invalid config (shown in UI + logs)."""
@@ -265,7 +263,12 @@ class Settings(BaseSettings):
             "cancel_open_orders_on_exit": True,
             "trading_mode": "spot",
             "margin_mode": "",
-            "unfilledtimeout": {"entry": 10, "exit": 10, "exit_timeout_count": 0, "unit": "minutes"},
+            "unfilledtimeout": {
+                "entry": 10,
+                "exit": 10,
+                "exit_timeout_count": 0,
+                "unit": "minutes",
+            },
             "entry_pricing": {
                 "price_side": "same",
                 "use_order_book": True,
@@ -351,5 +354,7 @@ def get_settings(*, reload: bool = False) -> Settings:
         get_settings.cache_clear()
     yaml_data = load_yaml_overrides()
     # Env wins over YAML via pydantic; pass YAML as init defaults for non-secret keys
-    safe = {k: v for k, v in yaml_data.items() if not str(k).endswith(("_key", "_secret", "_confirm"))}
+    safe = {
+        k: v for k, v in yaml_data.items() if not str(k).endswith(("_key", "_secret", "_confirm"))
+    }
     return Settings(**safe)

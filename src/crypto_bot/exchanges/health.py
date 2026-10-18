@@ -100,7 +100,7 @@ def check_exchange_health(settings: Settings) -> ExchangeHealth:
                     guidance.append(
                         f"Clock drift {drift:.0f}ms. Sync NTP before live/demo private calls."
                     )
-        except Exception:  # noqa: BLE001
+        except Exception:
             pass
         balance_ok = None
         try:
@@ -137,7 +137,7 @@ def check_exchange_health(settings: Settings) -> ExchangeHealth:
                 message="Network error",
                 guidance=guidance,
             )
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             log.warning("balance_check_skipped", error=str(e))
         last = ticker.get("last")
         return ExchangeHealth(
@@ -162,7 +162,7 @@ def check_exchange_health(settings: Settings) -> ExchangeHealth:
                 *guidance,
             ],
         )
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         return ExchangeHealth(
             ok=False,
             exchange=name,

@@ -23,7 +23,7 @@ def client(tmp_path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
     from crypto_bot.services import app_state as app_state_mod
 
     settings_mod.get_settings.cache_clear()
-    app_state_mod._STATE = None  # noqa: SLF001
+    app_state_mod._STATE = None
     app = create_app()
     return TestClient(app)
 

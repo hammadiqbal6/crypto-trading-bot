@@ -65,7 +65,7 @@ class FinBERTProvider(SentimentProvider):
                 truncation=True,
             )
             return self._pipe
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             self._failed = True
             log.warning(
                 "finbert_load_failed",
@@ -114,7 +114,7 @@ class LLMSentimentProvider(SentimentProvider):
         await self._limiter.acquire()
         try:
             raw = await self._complete(prompt)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             raise SentimentError(
                 f"{self.name} failed: {e}",
                 guidance=(

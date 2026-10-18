@@ -90,7 +90,9 @@ class SentimentPipeline:
                 model=settings.openai_model,
                 rpm=rpm,
             )
-        finbert = FinBERTProvider(model_name=settings.finbert_model) if settings.use_finbert else None
+        finbert = (
+            FinBERTProvider(model_name=settings.finbert_model) if settings.use_finbert else None
+        )
         # Research: FinBERT first, then LLM. On LLM failure → FinBERT/neutral.
         if finbert is not None:
             return cls(
@@ -145,17 +147,17 @@ class SentimentPipeline:
             except SentimentError as e:
                 self.stats["errors"] += 1
                 errors.append(e.guidance)
-                log.warning("sentiment_provider_failed", provider=provider.name, guidance=e.guidance)
-            except Exception as e:  # noqa: BLE001
+                log.warning(
+                    "sentiment_provider_failed", provider=provider.name, guidance=e.guidance
+                )
+            except Exception as e:
                 self.stats["errors"] += 1
                 errors.append(str(e))
                 log.warning("sentiment_provider_crash", provider=provider.name, error=str(e))
 
         self.stats["fallback"] += 1
         guidance = (
-            "; ".join(errors)
-            if errors
-            else "No sentiment providers available — using neutral 0.0."
+            "; ".join(errors) if errors else "No sentiment providers available — using neutral 0.0."
         )
         log.info("sentiment_neutral_fallback", guidance=guidance)
         return SentimentResult(
@@ -166,7 +168,9 @@ class SentimentPipeline:
             guidance=guidance,
         )
 
-    async def enrich_articles(self, articles: list[NewsArticle], *, limit: int = 40) -> list[NewsArticle]:
+    async def enrich_articles(
+        self, articles: list[NewsArticle], *, limit: int = 40
+    ) -> list[NewsArticle]:
         for art in articles[:limit]:
             if art.sentiment_score is not None:
                 continue

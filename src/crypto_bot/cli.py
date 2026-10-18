@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 from pathlib import Path
-from typing import Optional
+from typing import Annotated
 
 import typer
 import uvicorn
@@ -39,8 +39,8 @@ def version() -> None:
 
 @app.command("dashboard")
 def dashboard(
-    host: Optional[str] = None,
-    port: Optional[int] = None,
+    host: str | None = None,
+    port: int | None = None,
 ) -> None:
     """Start the FastAPI dashboard."""
     settings = get_settings()
@@ -55,7 +55,7 @@ def dashboard(
 
 @app.command("export-freqtrade-config")
 def export_freqtrade_config(
-    out: Path = typer.Option(Path("config/freqtrade/config.json"), help="Output path"),
+    out: Annotated[Path, typer.Option(help="Output path")] = Path("config/freqtrade/config.json"),
 ) -> None:
     """Write a freqtrade config JSON from settings (secrets from env)."""
     settings = get_settings()

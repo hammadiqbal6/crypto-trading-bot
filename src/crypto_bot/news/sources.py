@@ -161,10 +161,13 @@ class RSSSource(NewsSource):
                 if not title:
                     continue
                 blob = f"{title} {summary}".lower()
-                if keywords and not any(k.lower() in blob for k in keywords):
-                    # Keep some general crypto headlines even without coin match
-                    if not any(w in blob for w in ("bitcoin", "crypto", "ethereum", "btc", "eth")):
-                        continue
+                # Keep general crypto headlines even without an exact coin match
+                if (
+                    keywords
+                    and not any(k.lower() in blob for k in keywords)
+                    and not any(w in blob for w in ("bitcoin", "crypto", "ethereum", "btc", "eth"))
+                ):
+                    continue
                 published = None
                 if getattr(entry, "published_parsed", None):
                     try:
@@ -251,7 +254,7 @@ class RedditSource(NewsSource):
         client = await self._http()
         q = quote_plus(query)
         resp = await client.get(
-            f"https://oauth.reddit.com/r/CryptoCurrency/search",
+            "https://oauth.reddit.com/r/CryptoCurrency/search",
             params={"q": q, "restrict_sr": "true", "sort": "new", "limit": str(max_items)},
             headers={"Authorization": f"Bearer {token}", "User-Agent": self.user_agent},
         )

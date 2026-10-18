@@ -75,8 +75,8 @@ class AppState:
             "last_refresh": self.last_refresh,
             "guidance": s.missing_required_guidance(),
             "accuracy_disclaimer": (
-                "No free method reliably beats ~51–55% daily directional accuracy "
-                "out-of-sample. Target Sharpe after costs: 0.5–1.0."
+                "No free method reliably beats ~51-55% daily directional accuracy "
+                "out-of-sample. Target Sharpe after costs: 0.5-1.0."
             ),
         }
 

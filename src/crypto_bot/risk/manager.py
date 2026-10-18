@@ -99,9 +99,7 @@ class RiskManager:
         if self.state.drawdown_pct >= self.max_drawdown_pct:
             self._kill(f"max drawdown {self.state.drawdown_pct:.2f}% >= {self.max_drawdown_pct}%")
         if self.state.daily_pnl_pct <= -abs(self.max_daily_loss_pct):
-            self._kill(
-                f"daily loss {self.state.daily_pnl_pct:.2f}% <= -{self.max_daily_loss_pct}%"
-            )
+            self._kill(f"daily loss {self.state.daily_pnl_pct:.2f}% <= -{self.max_daily_loss_pct}%")
 
     def _kill(self, reason: str) -> None:
         if not self.state.killed:
@@ -124,9 +122,7 @@ class RiskManager:
             self._block(reason)
             raise RiskBreachError("max_open_trades", reason)
         if proposed_size_pct is not None and proposed_size_pct > self.position_size_cap_pct:
-            reason = (
-                f"size {proposed_size_pct:.2%} exceeds cap {self.position_size_cap_pct:.2%}"
-            )
+            reason = f"size {proposed_size_pct:.2%} exceeds cap {self.position_size_cap_pct:.2%}"
             self._block(reason)
             raise RiskBreachError("position_size_cap", reason)
 

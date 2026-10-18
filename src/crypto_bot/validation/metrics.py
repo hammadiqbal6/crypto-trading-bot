@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from typing import Sequence
+from collections.abc import Sequence
 
 import numpy as np
 from scipy import stats
@@ -55,11 +55,7 @@ def sharpe_std_error(
     if n_observations < 2:
         return float("inf")
     return math.sqrt(
-        (
-            1
-            - skew * observed_sharpe
-            + ((kurtosis - 1) / 4.0) * observed_sharpe**2
-        )
+        (1 - skew * observed_sharpe + ((kurtosis - 1) / 4.0) * observed_sharpe**2)
         / (n_observations - 1)
     )
 
@@ -83,9 +79,7 @@ def deflated_sharpe_ratio(
     """
     if n_trials < 1 or n_observations < 2:
         return 0.0
-    se = sharpe_std_error(
-        observed_sharpe, n_observations, skew=skew, kurtosis=kurtosis
-    )
+    se = sharpe_std_error(observed_sharpe, n_observations, skew=skew, kurtosis=kurtosis)
     if not math.isfinite(se) or se < 1e-12:
         return 0.0
     # Null expected max SR ≈ expected_max_z * se (z-space → SR-space)

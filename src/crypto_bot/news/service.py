@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from crypto_bot.news.sources import GDELTSource, NewsSource, RawArticle, RSSSource, RedditSource
+from crypto_bot.news.sources import GDELTSource, NewsSource, RawArticle, RedditSource, RSSSource
 from crypto_bot.utils.errors import NewsSourceError, RateLimitError
 from crypto_bot.utils.logging import get_logger
 
@@ -120,7 +120,7 @@ class NewsService:
             except NewsSourceError as e:
                 self.last_errors.append(e.to_dict())
                 log.warning("news_source_error", source=src.name, guidance=e.guidance)
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 err = NewsSourceError(
                     str(e),
                     guidance=f"Unexpected error from {src.name}. Other sources continue.",
@@ -176,9 +176,7 @@ class NewsService:
             return 0.0
         # Prefer coin-tagged
         tagged = [
-            a.sentiment_score
-            for a in arts
-            if a.sentiment_score is not None and coin in a.coins
+            a.sentiment_score for a in arts if a.sentiment_score is not None and coin in a.coins
         ]
         use = tagged if tagged else scores
         return float(sum(use) / len(use))

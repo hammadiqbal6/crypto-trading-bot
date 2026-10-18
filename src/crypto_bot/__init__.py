@@ -7,6 +7,6 @@ __license__ = "GPL-3.0-or-later"
 
 # Honest accuracy stance (never claim unproven edge):
 ACCURACY_DISCLAIMER = (
-    "No free method reliably beats ~51–55% daily directional accuracy out-of-sample. "
-    "Target Sharpe after costs: 0.5–1.0. Halve any published edge."
+    "No free method reliably beats ~51-55% daily directional accuracy out-of-sample. "
+    "Target Sharpe after costs: 0.5-1.0. Halve any published edge."
 )
