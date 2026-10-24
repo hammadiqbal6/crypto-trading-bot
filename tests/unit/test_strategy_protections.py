@@ -1,12 +1,46 @@
-"""Strategy wires risk settings into freqtrade protections."""
+"""Strategy wires risk settings into freqtrade protections.
+
+CI installs ``.[dev]`` without the optional ``engine`` extra (freqtrade).
+Stub a minimal ``freqtrade.strategy`` when the package is absent so this unit
+test still validates protection wiring without pulling the full engine.
+"""
 
 from __future__ import annotations
 
 import importlib.util
+import sys
+import types
 from pathlib import Path
 
 
+def _ensure_freqtrade_strategy_importable() -> None:
+    try:
+        import freqtrade.strategy  # noqa: F401
+
+        return
+    except ImportError:
+        pass
+    if "freqtrade.strategy" in sys.modules:
+        return
+    ft = types.ModuleType("freqtrade")
+    strat = types.ModuleType("freqtrade.strategy")
+
+    class IStrategy:
+        def __init__(self, config: dict) -> None:
+            self.config = config
+
+    class IntParameter:
+        def __init__(self, low: int, high: int, default: int = 0, **kwargs: object) -> None:
+            self.value = default
+
+    strat.IStrategy = IStrategy  # type: ignore[attr-defined]
+    strat.IntParameter = IntParameter  # type: ignore[attr-defined]
+    sys.modules["freqtrade"] = ft
+    sys.modules["freqtrade.strategy"] = strat
+
+
 def _load_strategy_class():
+    _ensure_freqtrade_strategy_importable()
     path = (
         Path(__file__).resolve().parents[2] / "user_data/strategies/VolatilityMomentumStrategy.py"
     )
