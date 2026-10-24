@@ -64,7 +64,6 @@ except ImportError:  # pragma: no cover - standalone freqtrade path
             },
         ]
 
-
     def time_series_momentum(close: pd.Series, *, lookback: int = 30) -> pd.Series:
         lagged = close.shift(1)
         mom = lagged / lagged.shift(lookback) - 1.0
@@ -138,7 +137,6 @@ class VolatilityMomentumStrategy(IStrategy):
             max_daily_loss_pct=self._max_daily_loss_pct,
             timeframe=str(config.get("timeframe") or self.timeframe),
         )
-
 
     def _load_sentiment(self) -> dict[str, float]:
         path = self.sentiment_path

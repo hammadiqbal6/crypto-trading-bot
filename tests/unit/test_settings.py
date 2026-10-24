@@ -96,7 +96,9 @@ def test_protections_mapped_from_risk_settings() -> None:
     assert "StoplossGuard" in methods
     dd = next(p for p in prots if p["method"] == "MaxDrawdown" and "lookback_period_candles" in p)
     assert dd["max_allowed_drawdown"] == pytest.approx(0.15)
-    daily = next(p for p in prots if p["method"] == "MaxDrawdown" and p.get("lookback_period") == 1440)
+    daily = next(
+        p for p in prots if p["method"] == "MaxDrawdown" and p.get("lookback_period") == 1440
+    )
     assert daily["max_allowed_drawdown"] == pytest.approx(0.03)
 
 

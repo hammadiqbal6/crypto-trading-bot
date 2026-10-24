@@ -158,9 +158,9 @@ def check_exchange_health(settings: Settings) -> ExchangeHealth:
         details: dict[str, Any] = {"btc_last": last}
         if settings.exchange_name == ExchangeName.BYBIT:
             details["bybit_api_public_url"] = resolve_bybit_api_public_url(ex)
-            details["enable_demo_trading"] = bool(
-                (ex.options or {}).get("enableDemoTrading")
-            ) and not settings.is_live
+            details["enable_demo_trading"] = (
+                bool((ex.options or {}).get("enableDemoTrading")) and not settings.is_live
+            )
         return ExchangeHealth(
             ok=True,
             exchange=name,

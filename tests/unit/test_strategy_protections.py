@@ -7,7 +7,9 @@ from pathlib import Path
 
 
 def _load_strategy_class():
-    path = Path(__file__).resolve().parents[2] / "user_data/strategies/VolatilityMomentumStrategy.py"
+    path = (
+        Path(__file__).resolve().parents[2] / "user_data/strategies/VolatilityMomentumStrategy.py"
+    )
     spec = importlib.util.spec_from_file_location("vol_mom_strategy", path)
     assert spec and spec.loader
     mod = importlib.util.module_from_spec(spec)
@@ -16,7 +18,7 @@ def _load_strategy_class():
 
 
 def test_strategy_protections_from_crypto_bot_config() -> None:
-    VolatilityMomentumStrategy = _load_strategy_class()
+    strategy_cls = _load_strategy_class()
     cfg = {
         "timeframe": "4h",
         "stake_currency": "USDT",
@@ -31,7 +33,7 @@ def test_strategy_protections_from_crypto_bot_config() -> None:
             "volatility_target_annual": 0.2,
         },
     }
-    strat = VolatilityMomentumStrategy(cfg)
+    strat = strategy_cls(cfg)
     assert isinstance(strat.protections, list)
     assert len(strat.protections) >= 3
     dd = next(
@@ -41,7 +43,9 @@ def test_strategy_protections_from_crypto_bot_config() -> None:
     )
     assert dd["max_allowed_drawdown"] == 0.12
     daily = next(
-        p for p in strat.protections if p["method"] == "MaxDrawdown" and p.get("lookback_period") == 1440
+        p
+        for p in strat.protections
+        if p["method"] == "MaxDrawdown" and p.get("lookback_period") == 1440
     )
     assert daily["max_allowed_drawdown"] == 0.025
     assert any(p["method"] == "StoplossGuard" for p in strat.protections)

@@ -70,7 +70,6 @@ def export_freqtrade_config(
     )
 
 
-
 @app.command("download-data")
 def download_data(
     symbol: str = "BTC/USDT",
