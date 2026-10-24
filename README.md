@@ -86,23 +86,55 @@ cp .env.example .env
 docker compose up --build
 ```
 
-Export freqtrade config and run (dry-run):
+Export freqtrade config and run (local paper / dry-run by default):
 
 ```bash
 crypto-bot export-freqtrade-config
-freqtrade backtesting -c config/freqtrade/config.json --strategy VolatilityMomentumStrategy
+freqtrade backtesting -c config/freqtrade/config.json --strategy VolatilityMomentumStrategy --enable-protections
 freqtrade lookahead-analysis -c config/freqtrade/config.json --strategy VolatilityMomentumStrategy
 freqtrade recursive-analysis -c config/freqtrade/config.json --strategy VolatilityMomentumStrategy
 ```
 
-## Live trading gate
+## Trading modes
 
-Live is **off by default**. Enabling requires:
+| `TRADING_MODE` | `dry_run` | Where orders go | Notes |
+|---|---|---|---|
+| `paper` (default) | `true` | Local simulation only | No exchange orders; safe default |
+| `demo` | `false` | Bybit Demo Trading or Binance Spot Testnet | Real demo/testnet orders; **not** mainnet |
+| `live` | `false` | Exchange mainnet | Requires live lock below |
 
-1. `LIVE_TRADING=true`
-2. `LIVE_TRADING_CONFIRM=I_UNDERSTAND_LIVE_RISK`
+Startup refuses `dry_run=false` unless demo/testnet endpoints are active **or** the live lock is fully set.
 
-Missing confirmation → startup `ValidationError`. Prefer 4–8 weeks of paper/demo matching backtest first.
+### Bybit Demo Trading (exchange demo mode)
+
+1. Create Demo Trading API keys at Bybit → Demo Trading → API Management  
+   ([docs](https://bybit-exchange.github.io/docs/v5/demo))
+2. In `.env`:
+   ```bash
+   TRADING_MODE=demo
+   BYBIT_DEMO=true
+   BYBIT_API_KEY=...
+   BYBIT_API_SECRET=...
+   LIVE_TRADING=false
+   ```
+3. `crypto-bot export-freqtrade-config` — exported config sets `exchange.demo_trading: true` and
+   `ccxt_config.options.enableDemoTrading: true` (freqtrade calls `enable_demo_trading(True)`).
+   Do **not** set `hostname: api-demo.bybit.com` (ccxt would call `api.api-demo.bybit.com`).
+4. `freqtrade trade -c config/freqtrade/config.json`
+
+### Live trading gate
+
+Live / mainnet is **off by default**. Enabling requires:
+
+1. `TRADING_MODE=live` (or `LIVE_TRADING=true`)
+2. `LIVE_TRADING=true`
+3. `LIVE_TRADING_CONFIRM=I_UNDERSTAND_LIVE_RISK`
+
+Missing confirmation → startup `ValidationError`. Prefer 4–8 weeks of paper + exchange-demo matching backtest first.
+
+### Risk protections
+
+`MAX_DRAWDOWN_PCT` and `MAX_DAILY_LOSS_PCT` map into freqtrade `protections` (MaxDrawdown ×2 + StoplossGuard) on the strategy and in the exported config (`enable_protections: true`). Use `--enable-protections` on backtests so drawdown limits are honored there too.
 
 ## Accounts & API keys
 

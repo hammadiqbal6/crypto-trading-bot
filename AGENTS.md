@@ -9,6 +9,9 @@ Build and maintain a **demo/paper-first** AI crypto trading bot. Honest accuracy
 ## Do
 
 - Keep **live trading off by default**; require `LIVE_TRADING` + `LIVE_TRADING_CONFIRM=I_UNDERSTAND_LIVE_RISK`.
+- Default `TRADING_MODE=paper` (local `dry_run`). `TRADING_MODE=demo` sends orders to Bybit Demo / Binance Testnet only (`dry_run=false` + demo endpoints). Refuse `dry_run=false` without demo/testnet or the live lock.
+- Bybit demo via `enable_demo_trading` / `exchange.demo_trading` — never `hostname: api-demo.bybit.com`.
+- Map `MAX_DRAWDOWN_PCT` / `MAX_DAILY_LOSS_PCT` into freqtrade `protections` (exported config + strategy).
 - Treat LLM/sentiment as a **feature/filter only** — never place orders directly; never override `RiskManager`.
 - Prefer modular layers: `config` → `data/news/sentiment` → `strategies` → `risk` → freqtrade engine → `api/dashboard`.
 - Use typed Python, pydantic settings, structlog, pytest, ruff, mypy.

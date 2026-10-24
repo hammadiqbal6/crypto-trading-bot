@@ -11,14 +11,25 @@ import yaml
 from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from crypto_bot.config.protections import build_freqtrade_protections
+
 ROOT = Path(__file__).resolve().parents[3]
 CONFIG_DIR = ROOT / "config"
 DEFAULT_YAML = CONFIG_DIR / "settings.yaml"
 
+LIVE_CONFIRM_PHRASE = "I_UNDERSTAND_LIVE_RISK"
+
 
 class TradingMode(StrEnum):
-    DEMO = "demo"
+    """Order routing mode.
+
+    - ``paper``: local freqtrade dry_run (default) — no exchange orders
+    - ``demo``: real orders on Bybit Demo Trading / Binance Spot Testnet
+    - ``live``: mainnet — requires LIVE_TRADING + confirm phrase
+    """
+
     PAPER = "paper"
+    DEMO = "demo"
     LIVE = "live"
 
 
@@ -44,8 +55,8 @@ class Settings(BaseSettings):
         case_sensitive=False,
     )
 
-    # Mode
-    trading_mode: TradingMode = TradingMode.DEMO
+    # Mode — paper (local dry_run) is the safe default
+    trading_mode: TradingMode = TradingMode.PAPER
     live_trading: bool = False
     live_trading_confirm: str = ""
 
@@ -135,28 +146,77 @@ class Settings(BaseSettings):
         return v
 
     @model_validator(mode="after")
-    def _live_trading_gate(self) -> Settings:
-        """Live trading requires explicit flag + confirmation phrase."""
-        if self.live_trading or self.trading_mode == TradingMode.LIVE:
-            confirm = (self.live_trading_confirm or "").strip()
-            if confirm != "I_UNDERSTAND_LIVE_RISK":
+    def _mode_and_live_gates(self) -> Settings:
+        """Enforce live lock and refuse unsafe dry_run=False routing."""
+        confirm = (self.live_trading_confirm or "").strip()
+        wants_live = self.live_trading or self.trading_mode == TradingMode.LIVE
+
+        if wants_live:
+            if confirm != LIVE_CONFIRM_PHRASE:
                 msg = (
                     "Live trading is blocked. Set LIVE_TRADING=true AND "
-                    "LIVE_TRADING_CONFIRM=I_UNDERSTAND_LIVE_RISK to enable. "
-                    "Default remains demo/paper only."
+                    f"LIVE_TRADING_CONFIRM={LIVE_CONFIRM_PHRASE} to enable. "
+                    "Default remains paper (local dry_run) or exchange demo/testnet."
                 )
                 raise ValueError(msg)
-            if self.trading_mode != TradingMode.LIVE:
-                object.__setattr__(self, "trading_mode", TradingMode.LIVE)
+            object.__setattr__(self, "trading_mode", TradingMode.LIVE)
+            object.__setattr__(self, "live_trading", True)
+            # Mainnet: never keep Bybit demo flag on
+            object.__setattr__(self, "bybit_demo", False)
+        elif self.trading_mode == TradingMode.DEMO:
+            if self.exchange_name == ExchangeName.BYBIT and not self.bybit_demo:
+                raise ValueError(
+                    "TRADING_MODE=demo with Bybit requires BYBIT_DEMO=true so orders "
+                    "hit api-demo.bybit.com (via ccxt enable_demo_trading), not mainnet."
+                )
         else:
-            # Force non-live modes to stay safe if somehow set without the gate
-            if self.trading_mode.value == "live":
-                object.__setattr__(self, "trading_mode", TradingMode.DEMO)
+            # Non-live, non-demo → paper
+            if self.trading_mode not in (TradingMode.PAPER, TradingMode.DEMO):
+                object.__setattr__(self, "trading_mode", TradingMode.PAPER)
+
+        # Refuse dry_run=False unless demo/testnet endpoints or full live lock
+        if not self.is_dry_run and not self.is_safe_for_real_orders:
+            raise ValueError(
+                "Refusing dry_run=False: neither exchange demo/testnet endpoints nor "
+                "the live-trading lock are in effect. Use TRADING_MODE=paper (local), "
+                "TRADING_MODE=demo with BYBIT_DEMO=true / Binance testnet, or "
+                f"LIVE_TRADING=true + LIVE_TRADING_CONFIRM={LIVE_CONFIRM_PHRASE}."
+            )
         return self
 
     @property
     def is_dry_run(self) -> bool:
-        return self.trading_mode != TradingMode.LIVE or not self.live_trading
+        """True only for local paper simulation (freqtrade dry_run)."""
+        return self.trading_mode == TradingMode.PAPER
+
+    @property
+    def is_exchange_demo(self) -> bool:
+        """Orders are sent to Bybit Demo / Binance Testnet (not local, not mainnet)."""
+        return self.trading_mode == TradingMode.DEMO
+
+    @property
+    def is_live(self) -> bool:
+        return self.trading_mode == TradingMode.LIVE and self.live_trading
+
+    @property
+    def uses_demo_or_testnet_endpoints(self) -> bool:
+        """True when REST hosts are demo/testnet (not production mainnet)."""
+        if self.is_live:
+            return False
+        if self.exchange_name == ExchangeName.BYBIT:
+            return bool(self.bybit_demo)
+        # This project only stores Binance *testnet* credentials
+        return True
+
+    @property
+    def is_safe_for_real_orders(self) -> bool:
+        """dry_run=False is allowed only for exchange-demo or fully gated live."""
+        if self.is_live:
+            confirm = (self.live_trading_confirm or "").strip()
+            return confirm == LIVE_CONFIRM_PHRASE
+        if self.is_exchange_demo:
+            return self.uses_demo_or_testnet_endpoints
+        return False
 
     @property
     def exchange_credentials_present(self) -> bool:
@@ -179,19 +239,23 @@ class Settings(BaseSettings):
     def missing_required_guidance(self) -> list[str]:
         """Actionable guidance for missing/invalid config (shown in UI + logs)."""
         tips: list[str] = []
-        if not self.exchange_credentials_present:
+        if self.is_exchange_demo and not self.exchange_credentials_present:
             if self.exchange_name == ExchangeName.BYBIT:
                 tips.append(
                     "Bybit Demo API keys missing. Create at Bybit → Demo Trading → API Management, "
-                    "set BYBIT_API_KEY / BYBIT_API_SECRET in .env. "
-                    "Docs: https://bybit-exchange.github.io/docs/v5/demo"
+                    "set BYBIT_API_KEY / BYBIT_API_SECRET in .env, keep BYBIT_DEMO=true and "
+                    "TRADING_MODE=demo. Docs: https://bybit-exchange.github.io/docs/v5/demo"
                 )
             else:
                 tips.append(
                     "Binance Testnet keys missing. Get keys at https://testnet.binance.vision "
-                    "and set BINANCE_TESTNET_API_KEY / BINANCE_TESTNET_API_SECRET. "
-                    "Note: Binance is not licensed in Pakistan for live trading."
+                    "and set BINANCE_TESTNET_API_KEY / BINANCE_TESTNET_API_SECRET with "
+                    "TRADING_MODE=demo. Note: Binance is not licensed in Pakistan for live trading."
                 )
+        elif not self.exchange_credentials_present and not self.is_dry_run:
+            tips.append(
+                "Exchange API keys missing but dry_run is false. Add keys or set TRADING_MODE=paper."
+            )
         if self.llm_provider == LLMProvider.GROQ and not self.llm_credentials_present:
             tips.append(
                 "GROQ_API_KEY missing. Sentiment will fall back to local FinBERT/neutral. "
@@ -211,47 +275,86 @@ class Settings(BaseSettings):
             )
         return tips
 
+    def freqtrade_protections(self) -> list[dict[str, Any]]:
+        return build_freqtrade_protections(
+            max_drawdown_pct=self.max_drawdown_pct,
+            max_daily_loss_pct=self.max_daily_loss_pct,
+            timeframe=self.timeframe,
+        )
+
+    def _bybit_exchange_block(self) -> dict[str, Any]:
+        use_demo = bool(self.bybit_demo) and not self.is_live
+        ccxt_config: dict[str, Any] = {
+            "enableRateLimit": True,
+            "options": {"defaultType": "spot"},
+        }
+        ccxt_async: dict[str, Any] = {
+            "enableRateLimit": True,
+            "options": {},
+        }
+        if use_demo:
+            # Do NOT set hostname=api-demo.bybit.com — ccxt builds
+            # https://api.{hostname} → api.api-demo.bybit.com (broken).
+            # Freqtrade calls enable_demo_trading(True) when demo_trading is set;
+            # options.enableDemoTrading mirrors that for ccxt consumers.
+            ccxt_config["options"]["enableDemoTrading"] = True
+            ccxt_async["options"]["enableDemoTrading"] = True
+        exchange: dict[str, Any] = {
+            "name": "bybit",
+            "key": self.bybit_api_key.get_secret_value(),
+            "secret": self.bybit_api_secret.get_secret_value(),
+            "ccxt_config": ccxt_config,
+            "ccxt_async_config": ccxt_async,
+            "pair_whitelist": self.pair_whitelist,
+            "pair_blacklist": [],
+        }
+        if use_demo:
+            exchange["demo_trading"] = True
+        return exchange
+
+    def _binance_exchange_block(self) -> dict[str, Any]:
+        use_testnet = not self.is_live
+        ccxt_config: dict[str, Any] = {
+            "enableRateLimit": True,
+            "options": {"defaultType": "spot"},
+        }
+        ccxt_async: dict[str, Any] = {"enableRateLimit": True, "options": {}}
+        if use_testnet:
+            # Spot Testnet hosts (not mainnet)
+            testnet_urls = {
+                "api": {
+                    "public": "https://testnet.binance.vision/api",
+                    "private": "https://testnet.binance.vision/api",
+                }
+            }
+            ccxt_config["urls"] = testnet_urls
+            ccxt_config["options"]["sandbox"] = True
+            ccxt_async["urls"] = testnet_urls
+            ccxt_async["options"] = {"sandbox": True}
+        return {
+            "name": "binance",
+            "key": self.binance_testnet_api_key.get_secret_value(),
+            "secret": self.binance_testnet_api_secret.get_secret_value(),
+            "ccxt_config": ccxt_config,
+            "ccxt_async_config": ccxt_async,
+            "pair_whitelist": self.pair_whitelist,
+            "pair_blacklist": [],
+        }
+
     def to_freqtrade_config(self) -> dict[str, Any]:
-        """Build a freqtrade-compatible config dict (dry_run enforced unless live gated)."""
+        """Build a freqtrade-compatible config dict.
+
+        ``dry_run`` is True only in paper mode. Demo mode sends orders to
+        Bybit Demo / Binance Testnet. Live mode requires the live lock and
+        uses mainnet endpoints.
+        """
         dry = self.is_dry_run
         if self.exchange_name == ExchangeName.BYBIT:
-            exchange: dict[str, Any] = {
-                "name": "bybit",
-                "key": self.bybit_api_key.get_secret_value(),
-                "secret": self.bybit_api_secret.get_secret_value(),
-                "ccxt_config": {
-                    "enableRateLimit": True,
-                    "options": {"defaultType": "spot"},
-                },
-                "ccxt_async_config": {"enableRateLimit": True},
-                "pair_whitelist": self.pair_whitelist,
-                "pair_blacklist": [],
-            }
-            if self.bybit_demo or dry:
-                # Demo Trading endpoint
-                exchange["ccxt_config"]["hostname"] = "api-demo.bybit.com"
-                exchange["ccxt_async_config"]["hostname"] = "api-demo.bybit.com"
+            exchange = self._bybit_exchange_block()
         else:
-            exchange = {
-                "name": "binance",
-                "key": self.binance_testnet_api_key.get_secret_value(),
-                "secret": self.binance_testnet_api_secret.get_secret_value(),
-                "ccxt_config": {
-                    "enableRateLimit": True,
-                    "options": {"defaultType": "spot"},
-                },
-                "ccxt_async_config": {"enableRateLimit": True},
-                "pair_whitelist": self.pair_whitelist,
-                "pair_blacklist": [],
-            }
-            if dry:
-                exchange["ccxt_config"]["urls"] = {
-                    "api": {
-                        "public": "https://testnet.binance.vision/api",
-                        "private": "https://testnet.binance.vision/api",
-                    }
-                }
+            exchange = self._binance_exchange_block()
 
+        protections = self.freqtrade_protections()
         cfg: dict[str, Any] = {
             "max_open_trades": self.max_open_trades,
             "stake_currency": self.stake_currency,
@@ -286,12 +389,15 @@ class Settings(BaseSettings):
             "timeframe": self.timeframe,
             "stoploss": self.stoploss_pct,
             "minimal_roi": {"0": 0.10, "60": 0.05, "180": 0.02, "360": 0},
+            # Required for backtests to honor strategy protections
+            "enable_protections": True,
             "bot_name": "crypto_bot",
             "initial_state": "running",
             "force_entry_enable": False,
             "internals": {"process_throttle_secs": 5},
             "strategy": "VolatilityMomentumStrategy",
-            "strategy_path": str(self.user_data_dir / "strategies"),
+            # Omit strategy_path — equals freqtrade's default user_data/strategies
+            # and previously caused "DUPLICATE NAME" when both paths were scanned.
             "user_data_dir": str(self.user_data_dir),
             "datadir": str(self.user_data_dir / "data"),
             "logfile": str(self.user_data_dir / "logs" / "freqtrade.log"),
@@ -316,6 +422,7 @@ class Settings(BaseSettings):
                 "max_drawdown_pct": self.max_drawdown_pct,
                 "freqai_enabled": self.freqai_enabled,
                 "carry_enabled": self.carry_enabled,
+                "protections": protections,
             },
         }
         if self.freqai_enabled:

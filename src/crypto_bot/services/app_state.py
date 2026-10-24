@@ -65,6 +65,7 @@ class AppState:
             "trading_mode": s.trading_mode.value,
             "live_trading": s.live_trading,
             "dry_run": s.is_dry_run,
+            "exchange_demo": s.is_exchange_demo,
             "exchange": s.exchange_name.value,
             "bybit_demo": s.bybit_demo,
             "bot_running": self.bot_running,

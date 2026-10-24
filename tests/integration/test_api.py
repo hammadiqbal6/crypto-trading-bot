@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 # Safe defaults before import
 os.environ.setdefault("LIVE_TRADING", "false")
-os.environ.setdefault("TRADING_MODE", "demo")
+os.environ.setdefault("TRADING_MODE", "paper")
 os.environ.setdefault("LLM_PROVIDER", "none")
 os.environ.setdefault("USE_FINBERT", "false")
 

@@ -40,6 +40,19 @@ class ExchangeHealth:
         }
 
 
+def resolve_bybit_api_public_url(ex: ccxt.Exchange) -> str:
+    """Return the public REST URL after hostname implode (for tests / diagnostics)."""
+    api = ex.urls.get("api") or {}
+    template = ""
+    if isinstance(api, dict):
+        template = str(api.get("public") or api.get("spot") or next(iter(api.values()), ""))
+    elif isinstance(api, str):
+        template = api
+    if hasattr(ex, "implode_hostname"):
+        return str(ex.implode_hostname(template))
+    return template.replace("{hostname}", getattr(ex, "hostname", "") or "")
+
+
 def _build_ccxt(settings: Settings) -> ccxt.Exchange:
     if settings.exchange_name == ExchangeName.BYBIT:
         ex = ccxt.bybit(
@@ -47,16 +60,17 @@ def _build_ccxt(settings: Settings) -> ccxt.Exchange:
                 "apiKey": settings.bybit_api_key.get_secret_value() or None,
                 "secret": settings.bybit_api_secret.get_secret_value() or None,
                 "enableRateLimit": True,
-                "options": {"defaultType": "spot"},
+                "options": {
+                    "defaultType": "spot",
+                    # Mirrored for callers that inspect options; URLs rewrite via method below.
+                    "enableDemoTrading": bool(settings.bybit_demo) and not settings.is_live,
+                },
             }
         )
-        if settings.bybit_demo or settings.is_dry_run:
-            # Demo Trading REST host
-            ex.urls["api"] = ex.urls.get("api", {})
-            if isinstance(ex.urls["api"], dict):
-                for k in list(ex.urls["api"].keys()):
-                    ex.urls["api"][k] = "https://api-demo.bybit.com"
-            ex.hostname = "api-demo.bybit.com"
+        if settings.bybit_demo and not settings.is_live:
+            # Correct path: enable_demo_trading rewrites urls to https://api-demo.{hostname}
+            # (hostname stays bybit.com). Do NOT set hostname=api-demo.bybit.com.
+            ex.enable_demo_trading(True)
         return ex
     ex = ccxt.binance(
         {
@@ -66,7 +80,7 @@ def _build_ccxt(settings: Settings) -> ccxt.Exchange:
             "options": {"defaultType": "spot"},
         }
     )
-    if settings.is_dry_run:
+    if not settings.is_live:
         ex.set_sandbox_mode(True)
     return ex
 
@@ -114,7 +128,8 @@ def check_exchange_health(settings: Settings) -> ExchangeHealth:
                 balance_ok = False
         except ccxt.AuthenticationError:
             guidance.append(
-                "Authentication failed. Regenerate API keys; ensure Demo keys for api-demo.bybit.com."
+                "Authentication failed. Regenerate API keys; ensure Demo keys with "
+                "enable_demo_trading / api-demo.bybit.com."
             )
             return ExchangeHealth(
                 ok=False,
@@ -140,6 +155,12 @@ def check_exchange_health(settings: Settings) -> ExchangeHealth:
         except Exception as e:
             log.warning("balance_check_skipped", error=str(e))
         last = ticker.get("last")
+        details: dict[str, Any] = {"btc_last": last}
+        if settings.exchange_name == ExchangeName.BYBIT:
+            details["bybit_api_public_url"] = resolve_bybit_api_public_url(ex)
+            details["enable_demo_trading"] = bool(
+                (ex.options or {}).get("enableDemoTrading")
+            ) and not settings.is_live
         return ExchangeHealth(
             ok=True,
             exchange=name,
@@ -149,7 +170,7 @@ def check_exchange_health(settings: Settings) -> ExchangeHealth:
             balance_ok=balance_ok,
             message=f"BTC/USDT last={last}",
             guidance=guidance,
-            details={"btc_last": last},
+            details=details,
         )
     except ccxt.NetworkError as e:
         msg = str(e)
