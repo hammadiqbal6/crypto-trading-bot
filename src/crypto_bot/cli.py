@@ -62,7 +62,12 @@ def export_freqtrade_config(
     cfg = settings.to_freqtrade_config()
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(cfg, indent=2), encoding="utf-8")
-    typer.echo(f"Wrote {out} (dry_run={cfg['dry_run']})")
+    mode = settings.trading_mode.value
+    demo = bool(cfg.get("exchange", {}).get("demo_trading"))
+    typer.echo(
+        f"Wrote {out} (trading_mode={mode}, dry_run={cfg['dry_run']}, "
+        f"bybit_demo_trading={demo}, enable_protections={cfg.get('enable_protections')})"
+    )
 
 
 @app.command("download-data")

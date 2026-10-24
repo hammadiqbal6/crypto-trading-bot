@@ -1,5 +1,7 @@
 # Non-secret defaults (override via .env for secrets and mode flags)
-trading_mode: demo
+# paper = local dry_run (default). demo = Bybit Demo / Binance Testnet orders.
+# live = mainnet (requires LIVE_TRADING + LIVE_TRADING_CONFIRM).
+trading_mode: paper
 live_trading: false
 exchange_name: bybit
 bybit_demo: true

@@ -4,14 +4,24 @@
   "dry_run": true,
   "dry_run_wallet": 10000,
   "trading_mode": "spot",
+  "enable_protections": true,
   "exchange": {
     "name": "bybit",
     "key": "",
     "secret": "",
+    "demo_trading": true,
     "ccxt_config": {
       "enableRateLimit": true,
-      "hostname": "api-demo.bybit.com",
-      "options": {"defaultType": "spot"}
+      "options": {
+        "defaultType": "spot",
+        "enableDemoTrading": true
+      }
+    },
+    "ccxt_async_config": {
+      "enableRateLimit": true,
+      "options": {
+        "enableDemoTrading": true
+      }
     },
     "pair_whitelist": ["BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "XRP/USDT"],
     "pair_blacklist": []
@@ -27,6 +37,8 @@
     "sentiment_sizeup_threshold": 0.45,
     "sentiment_sizeup_factor": 1.15,
     "volatility_target_annual": 0.2,
+    "max_daily_loss_pct": 3.0,
+    "max_drawdown_pct": 15.0,
     "freqai_enabled": false,
     "carry_enabled": false
   }

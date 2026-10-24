@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 # Optional import of shared signal helpers when installed as package
 try:
+    from crypto_bot.config.protections import build_freqtrade_protections
     from crypto_bot.strategies.signals import (
         combine_signals,
         cross_sectional_momentum,
@@ -28,6 +29,40 @@ try:
         volatility_scale_factor,
     )
 except ImportError:  # pragma: no cover - standalone freqtrade path
+
+    def build_freqtrade_protections(
+        *,
+        max_drawdown_pct: float,
+        max_daily_loss_pct: float,
+        timeframe: str = "4h",
+    ) -> list[dict[str, Any]]:
+        max_dd = abs(float(max_drawdown_pct)) / 100.0
+        max_daily = abs(float(max_daily_loss_pct)) / 100.0
+        return [
+            {
+                "method": "MaxDrawdown",
+                "lookback_period_candles": 10_000,
+                "trade_limit": 1,
+                "stop_duration_candles": 10_000,
+                "max_allowed_drawdown": max_dd,
+                "calculation_mode": "equity",
+            },
+            {
+                "method": "MaxDrawdown",
+                "lookback_period": 1440,
+                "trade_limit": 1,
+                "unlock_at": "00:00",
+                "max_allowed_drawdown": max_daily,
+                "calculation_mode": "equity",
+            },
+            {
+                "method": "StoplossGuard",
+                "lookback_period_candles": 48,
+                "trade_limit": 4,
+                "stop_duration_candles": 12,
+                "required_profit": 0.0,
+            },
+        ]
 
     def time_series_momentum(close: pd.Series, *, lookback: int = 30) -> pd.Series:
         lagged = close.shift(1)
@@ -91,8 +126,17 @@ class VolatilityMomentumStrategy(IStrategy):
         self.sentiment_sizeup = float(bot_cfg.get("sentiment_sizeup_threshold", 0.45))
         self.sentiment_sizeup_factor = float(bot_cfg.get("sentiment_sizeup_factor", 1.15))
         self.vol_target = float(bot_cfg.get("volatility_target_annual", 0.20))
+        self._max_drawdown_pct = float(bot_cfg.get("max_drawdown_pct", 15.0))
+        self._max_daily_loss_pct = float(bot_cfg.get("max_daily_loss_pct", 3.0))
         self._xs_cache: dict[str, float] = {}
         self._last_reasons: dict[str, str] = {}
+        # Wire risk settings into freqtrade ProtectionManager (live + backtest with
+        # enable_protections). Previously only documented as "enforced externally".
+        self.protections = build_freqtrade_protections(
+            max_drawdown_pct=self._max_drawdown_pct,
+            max_daily_loss_pct=self._max_daily_loss_pct,
+            timeframe=str(config.get("timeframe") or self.timeframe),
+        )
 
     def _load_sentiment(self) -> dict[str, float]:
         path = self.sentiment_path
@@ -202,7 +246,11 @@ class VolatilityMomentumStrategy(IStrategy):
         side: str,
         **kwargs: Any,
     ) -> float:
-        """Vol + sentiment size-up; never exceeds max_stake. Risk caps enforced externally."""
+        """Vol + sentiment size-up; never exceeds max_stake.
+
+        Portfolio drawdown / daily-loss caps are enforced via ``protections``
+        (MaxDrawdown + StoplossGuard) and the dashboard RiskManager.
+        """
         sent_map = self._load_sentiment()
         coin = pair.split("/")[0]
         sent = float(sent_map.get(pair, sent_map.get(coin, 0.0)))

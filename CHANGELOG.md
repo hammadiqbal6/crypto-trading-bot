@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Fix Bybit demo URL wiring (`enable_demo_trading` / `demo_trading`, not `hostname=api-demo.bybit.com`).
+- Add `TRADING_MODE=paper|demo|live`: paper is local dry_run (default); demo hits Bybit Demo / Binance Testnet; live requires the confirm lock.
+- Map `MAX_DRAWDOWN_PCT` / `MAX_DAILY_LOSS_PCT` into freqtrade MaxDrawdown + StoplossGuard protections.
+- Drop redundant `strategy_path` to avoid freqtrade duplicate strategy name.
+
 ## 0.1.0 — 2026-10-18
 
 - Initial Signalforge / crypto-trading-bot scaffold.
